@@ -15,8 +15,7 @@ class CheckIfTranslationsAreAllThereCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'translations:check {--directory=} {--excludedDirectories=none}';
-
+    protected $signature = 'translations:check {--directory=} {--excludedDirectories=config}';
     /**
      * The console command description.
      *
@@ -33,6 +32,8 @@ class CheckIfTranslationsAreAllThereCommand extends Command
      * @var array
      */
     public array $realLines = [];
+
+    const EXCLUDE_MAC_FILES = ['.DS_Store'];
 
     /**
      * Create a new command instance.
@@ -53,7 +54,9 @@ class CheckIfTranslationsAreAllThereCommand extends Command
     {
         $directory = $this->option('directory') ?: app()->langPath();
 
-        if ($this->option('excludedDirectories') === 'none') {
+        if ($this->option('excludedDirectories') === 'config') {
+            $this->excludedDirectories = (array)config('translations-checker.excluded_directories', []);
+        } elseif ($this->option('excludedDirectories') === 'none') {
             $this->excludedDirectories = [];
         } elseif ($this->option('excludedDirectories')) {
             $this->excludedDirectories = explode(',', $this->option('excludedDirectories'));
@@ -88,6 +91,10 @@ class CheckIfTranslationsAreAllThereCommand extends Command
                         continue;
                     }
 
+                    if(in_array($languageWithMissingFile, self::EXCLUDE_MAC_FILES)) {
+                        continue;
+                    }
+
                     $missingFiles[] = 'The language ' . $languageWithMissingFile . ' (' . $directory . '/' . $languageWithMissingFile . ') is missing the file ( ' . $fileName . ' )';
 				}
                 $this->handleFile($languageDir, $langFile);
@@ -116,6 +123,10 @@ class CheckIfTranslationsAreAllThereCommand extends Command
                         if(Str::contains($fileName, $checkingLanguage)) {
                             $fileName = str_replace($checkingLanguage, '', $fileName);
                         }
+                    }
+
+                    if(in_array($language, self::EXCLUDE_MAC_FILES)) {
+                        continue;
                     }
 
                     if(Str::contains($fileKey, $languages)) {
